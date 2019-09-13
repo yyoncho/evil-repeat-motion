@@ -2,8 +2,9 @@
 
 ;; Copyright (C) 2019  Ivan Yonchovski
 
+;; Homepage: https://github.com/yyoncho/evil-repeat-motion
 ;; Author: Ivan Yonchovski <yyoncho@gmail.com>
-;; Keywords: evil, motions
+;; Keywords: convenience
 ;; Version: 0.0.1
 ;; Package-Requires: ((evil "1.0") (emacs "25.1"))
 
@@ -22,14 +23,16 @@
 
 ;;; Commentary:
 
-;; Implements repeatable motions.
+;; Implements evil repeatable motions.
 
 ;;; Code:
 
 (require 'evil)
+(require 'cl-lib)
 (require 'seq)
+(require 'subr-x)
 
-(defvar-local evil-repeat-motion--last-command nil)
+(defvar evil-repeat-motion--last-command nil)
 
 (defvar evil-repeat-motion-pairs
   '(("forward" . "backward")
@@ -43,9 +46,9 @@
 ORIG - the original function.
 ARGS - the args of the original command."
   (when (equal this-command orig)
-    (setq-local evil-repeat-motion--last-command (list* orig args))))
+    (setq evil-repeat-motion--last-command (cl-list* orig args))))
 
-(defun evil-repeat-motion-do (&optional count)
+(defun evil-repeat-motion-apply (&optional count)
   "Repeat last motion COUNT times."
   (interactive "P")
   (when evil-repeat-motion--last-command
@@ -61,7 +64,17 @@ ARGS - the args of the original command."
         (apply #'funcall-interactively reverse
                (cl-rest evil-repeat-motion--last-command))))))
 
-(defun evil-repeat-motion-find-reverse-command (command)
+(defun evil-repeat-motion-reverse-command (&optional count)
+  "Repeat last motion COUNT times."
+  (interactive "P")
+  (when evil-repeat-motion--last-command
+    (when-let (reverse (evil-repeat-motion-find-reverse-command (cl-first evil-repeat-motion--last-command)))
+      (dotimes (_ (or count 1))
+        (apply #'funcall-interactively reverse
+               (cl-rest evil-repeat-motion--last-command)))
+      (setq evil-repeat-motion--last-command (cl-list* reverse (cl-rest evil-repeat-motion--last-command))))))
+
+(defun evil-repeat-motion-reverse-command (command)
   "Repeat last motion COMMAND times."
   (let ((command (format "%s" command)))
     (cl-labels ((matches (pair)
@@ -73,38 +86,39 @@ ARGS - the args of the original command."
         (intern (replace-regexp-in-string (regexp-quote old) new command t t))))))
 
 (defun evil-repeat-motion--setup ()
-  "Configure `evil-repeat-motion'."
+  "Configure `evil-repeat-motion-apply'."
   (seq-do
    (lambda (command-data)
      (when (eq (plist-get (cdr command-data) :repeat) 'motion)
        (let ((command (car command-data)))
          (advice-add command
-                     :after (apply-partially #'evil-repeat-motion--advice command)
+                     :after (lambda (&rest args)
+                              (interactive)
+                              (evil-repeat-motion--advice command args))
                      '((name . evil-repeat-motion-adv))))))
    evil-command-properties))
 
 (defun evil-repeat-motion-cleanup ()
-  "Cleanup the `evil-repeat-motion' advices."
+  "Cleanup the `evil-repeat-motion-apply' advices."
   (seq-do
    (lambda (command-data)
      (when (eq (plist-get (cdr command-data) :repeat) 'motion)
        (let ((command (car command-data)))
-         (advice-remove command 'evil-repeat-motion-adv))))
+         (advice-remove command 'xxx))))
    evil-command-properties))
 
 (defvar evil-repeat-motion-mode-map (make-sparse-keymap)
   "Keymap for `evil-repeat-motion-mode'.")
 
-(evil-define-key 'normal evil-repeat-motion-mode-map  ";" 'evil-repeat-motion-do)
-(evil-define-key 'visual evil-repeat-motion-mode-map  ";" 'evil-repeat-motion-do)
-(evil-define-key 'normal evil-repeat-motion-mode-map  "," nil)
-(evil-define-key 'visual evil-repeat-motion-mode-map  "," nil)
+(evil-define-key 'normal evil-repeat-motion-mode-map  ";" 'evil-repeat-motion-apply)
+(evil-define-key 'visual evil-repeat-motion-mode-map  ";" 'evil-repeat-motion-apply)
 
+;;;###autoload
 (define-minor-mode evil-repeat-motion-mode ""
   nil nil nil
   :global t
   :keymap evil-repeat-motion-mode-map
-  :group 'evil-repeat-motion
+  :group 'evil-repeat-motion-apply
   (cond
    (evil-repeat-motion-mode (evil-repeat-motion--setup))
    (t (evil-repeat-motion-cleanup))) )
