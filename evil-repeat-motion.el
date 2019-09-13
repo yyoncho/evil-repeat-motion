@@ -1,9 +1,11 @@
-;;; evil-repeat-motion.el --- evil repeat motion     -*- lexical-binding: t; -*-
+;;; evil-repeat-motion.el --- Evil repeat motion  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2019  Ivan Yonchovski
 
 ;; Author: Ivan Yonchovski <yyoncho@gmail.com>
-;; Keywords:
+;; Keywords: evil, motions
+;; Version: 0.0.1
+;; Package-Requires: ((evil "1.0") (emacs "25.1"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -20,7 +22,7 @@
 
 ;;; Commentary:
 
-;;
+;; Implements repeatable motions.
 
 ;;; Code:
 
@@ -28,6 +30,13 @@
 (require 'seq)
 
 (defvar-local evil-repeat-motion--last-command nil)
+
+(defvar evil-repeat-motion-pairs
+  '(("forward" . "backward")
+    ("next" . "previous")
+    ("beginning-of" . "end-of")
+    ("up" . "down")
+    ("first" . "last")))
 
 (defun evil-repeat-motion--advice (orig &rest args)
   "Evil repeat motion advice.
@@ -42,6 +51,26 @@ ARGS - the args of the original command."
   (when evil-repeat-motion--last-command
     (dotimes (_ (or count 1))
       (apply #'funcall-interactively evil-repeat-motion--last-command))))
+
+(defun evil-repeat-motion-reverse (&optional count)
+  "Repeat last motion COUNT times."
+  (interactive "P")
+  (when evil-repeat-motion--last-command
+    (when-let (reverse (evil-repeat-motion-find-reverse-command (cl-first evil-repeat-motion--last-command)))
+      (dotimes (_ (or count 1))
+        (apply #'funcall-interactively reverse
+               (cl-rest evil-repeat-motion--last-command))))))
+
+(defun evil-repeat-motion-find-reverse-command (command)
+  "Repeat last motion COMMAND times."
+  (let ((command (format "%s" command)))
+    (cl-labels ((matches (pair)
+                         (cond
+                          ((string-match-p (regexp-quote (car pair)) command) (cons (cdr pair)
+                                                                                    (car pair)))
+                          ((string-match-p (regexp-quote (cdr pair)) command) pair))))
+      (pcase-let ((`(,new . ,old) (matches (seq-find #'matches evil-repeat-motion-pairs))))
+        (intern (replace-regexp-in-string (regexp-quote old) new command t t))))))
 
 (defun evil-repeat-motion--setup ()
   "Configure `evil-repeat-motion'."
@@ -68,6 +97,8 @@ ARGS - the args of the original command."
 
 (evil-define-key 'normal evil-repeat-motion-mode-map  ";" 'evil-repeat-motion-do)
 (evil-define-key 'visual evil-repeat-motion-mode-map  ";" 'evil-repeat-motion-do)
+(evil-define-key 'normal evil-repeat-motion-mode-map  "," nil)
+(evil-define-key 'visual evil-repeat-motion-mode-map  "," nil)
 
 (define-minor-mode evil-repeat-motion-mode ""
   nil nil nil
