@@ -29,18 +29,19 @@
 
 (defvar-local evil-repeat-motion--last-command nil)
 
-(defun evil-repeat-motion--advice (oldfun &rest args)
-  "`evil-repeat-motion' advice for "
-  (when (called-interactively-p 'interactive)
-    (setq-local evil-repeat-motion--last-command (list oldfun args)))
-  (apply oldfun args))
+(defun evil-repeat-motion--advice (orig &rest args)
+  "Evil repeat motion advice.
+ORIG - the original function.
+ARGS - the args of the original command."
+  (when (equal this-command orig)
+    (setq-local evil-repeat-motion--last-command (list* orig args))))
 
 (defun evil-repeat-motion-do (&optional count)
   "Repeat last motion COUNT times."
   (interactive "P")
   (when evil-repeat-motion--last-command
     (dotimes (_ (or count 1))
-      (apply (car evil-repeat-motion--last-command) (second evil-repeat-motion--last-command)))))
+      (apply #'funcall-interactively evil-repeat-motion--last-command))))
 
 (defun evil-repeat-motion--setup ()
   "Configure `evil-repeat-motion'."
@@ -48,7 +49,9 @@
    (lambda (command-data)
      (when (eq (plist-get (cdr command-data) :repeat) 'motion)
        (let ((command (car command-data)))
-         (advice-add command :around 'evil-repeat-motion--advice))))
+         (advice-add command
+                     :after (apply-partially #'evil-repeat-motion--advice command)
+                     '((name . evil-repeat-motion-adv))))))
    evil-command-properties))
 
 (defun evil-repeat-motion-cleanup ()
@@ -57,7 +60,7 @@
    (lambda (command-data)
      (when (eq (plist-get (cdr command-data) :repeat) 'motion)
        (let ((command (car command-data)))
-         (advice-remove command 'evil-repeat-motion--advice))))
+         (advice-remove command 'evil-repeat-motion-adv))))
    evil-command-properties))
 
 (defvar evil-repeat-motion-mode-map (make-sparse-keymap)
