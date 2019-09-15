@@ -6,27 +6,21 @@
    #+end_src
 
 ** Commands
-   - =evil-repeat-motion-apply= - repeat the last motion. It acts as a replacement of
-     =evil-repeat-find-char= but it repeats all motion commands marked as with
-     =:repeat motion= in =evil-command-properties=. Bound by default to
+   - =evil-repeat-motion-apply= - repeat the last motion. It acts as a replacement of =evil-repeat-find-char= but it repeats all motion commands marked as with =:repeat motion= in =evil-command-properties=. Bound by default to =;=
    - =evil-repeat-motion-reverse= - applies the reverse of the last motion.
-   - =evil-repeat-motion-reverse-command= - the same as
-     =evil-repeat-motion-reverse= but it reverses the current command so it can
-     be repeated via =evil-repeat-motion-reverse=.
-** Usage
+   - =evil-repeat-motion-reverse-command= - the same as =evil-repeat-motion-reverse= but it reverses the current command so it can be repeated via =evil-repeat-motion-reverse=.
+** Configuration
 *** Spacemacs
-    [[http://spacemacs.org][spacemacs]] users =,= so you I have use different key. Here it are
+    [[http://spacemacs.org][spacemacs]] takes away "," so you have to use different keybinding. Here it is a suggestion(feel free to suggest better mapping).
     #+begin_src elisp
       (spacemacs/set-leader-keys "," 'evil-repeat-motion-reverse-command)
     #+end_src
 *** Vanilla evil
     #+begin_src elisp
-      (evil-define-key 'normal evil-repeat-motion-mode-map  ";" #'evil-repeat-motion-reverse)
-      (evil-define-key 'visual evil-repeat-motion-mode-map  ";" #'evil-repeat-motion-reverse)
+      (evil-define-key 'normal evil-repeat-motion-mode-map "," #'evil-repeat-motion-reverse)
+      (evil-define-key 'visual evil-repeat-motion-mode-map "," #'evil-repeat-motion-reverse)
     #+end_src
 ** Alternatives
-   - [[https://github.com/willghatch/emacs-repeatable-motion][emacs-repeatable-motion]] - the same idea but requires the users to manually
-     configure the pairs while [[https://github.com/yyoncho/evil-repeat-motion][evil-repeat-motion]] automatically detects the
-     motion commands uses advices to track the last executed motion.
+   - [[https://github.com/willghatch/emacs-repeatable-motion][emacs-repeatable-motion]] - the same idea but requires the users to manually configure the pairs while [[https://github.com/yyoncho/evil-repeat-motion][evil-repeat-motion]] automatically detects the motion commands using =evil-command-properties= and uses advices to track the last executed motion.
 ** Additional links
    [[https://www.vim.org/scripts/script.php?script_id=4914][repeatable-motions.vim]] - vim plugin with similar idea.
