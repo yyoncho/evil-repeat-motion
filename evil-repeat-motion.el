@@ -41,25 +41,27 @@
     ("up" . "down")
     ("first" . "last")))
 
-(defun evil-repeat-motion--advice (orig &rest args)
+(defun evil-repeat-motion--advice (orig args)
   "Evil repeat motion advice.
 ORIG - the original function.
 ARGS - the args of the original command."
   (when (equal this-command orig)
-    (setq evil-repeat-motion--last-command (cl-list* orig args))))
+    (setq evil-repeat-motion--last-command (cons orig args))))
 
 (defun evil-repeat-motion-apply (&optional count)
   "Repeat last motion COUNT times."
   (interactive "P")
   (when evil-repeat-motion--last-command
     (dotimes (_ (or count 1))
-      (apply #'funcall-interactively evil-repeat-motion--last-command))))
+      (apply #'funcall-interactively
+             (cl-first evil-repeat-motion--last-command)
+             (cl-rest evil-repeat-motion--last-command)))))
 
 (defun evil-repeat-motion-reverse (&optional count)
   "Repeat last motion COUNT times."
   (interactive "P")
   (when evil-repeat-motion--last-command
-    (when-let (reverse (evil-repeat-motion-find-reverse-command (cl-first evil-repeat-motion--last-command)))
+    (when-let (reverse (evil-repeat-motion--find-reverse-command (cl-first evil-repeat-motion--last-command)))
       (dotimes (_ (or count 1))
         (apply #'funcall-interactively reverse
                (cl-rest evil-repeat-motion--last-command))))))
@@ -68,13 +70,14 @@ ARGS - the args of the original command."
   "Repeat last motion COUNT times."
   (interactive "P")
   (when evil-repeat-motion--last-command
-    (when-let (reverse (evil-repeat-motion-find-reverse-command (cl-first evil-repeat-motion--last-command)))
+    (when-let (reverse (evil-repeat-motion--find-reverse-command (cl-first evil-repeat-motion--last-command)))
       (dotimes (_ (or count 1))
-        (apply #'funcall-interactively reverse
+        (apply #'funcall-interactively
+               reverse
                (cl-rest evil-repeat-motion--last-command)))
       (setq evil-repeat-motion--last-command (cl-list* reverse (cl-rest evil-repeat-motion--last-command))))))
 
-(defun evil-repeat-motion-reverse-command (command)
+(defun evil-repeat-motion--find-reverse-command  (command)
   "Repeat last motion COMMAND times."
   (let ((command (format "%s" command)))
     (cl-labels ((matches (pair)
@@ -84,28 +87,6 @@ ARGS - the args of the original command."
                           ((string-match-p (regexp-quote (cdr pair)) command) pair))))
       (pcase-let ((`(,new . ,old) (matches (seq-find #'matches evil-repeat-motion-pairs))))
         (intern (replace-regexp-in-string (regexp-quote old) new command t t))))))
-
-(defun evil-repeat-motion--setup ()
-  "Configure `evil-repeat-motion-apply'."
-  (seq-do
-   (lambda (command-data)
-     (when (eq (plist-get (cdr command-data) :repeat) 'motion)
-       (let ((command (car command-data)))
-         (advice-add command
-                     :after (lambda (&rest args)
-                              (interactive)
-                              (evil-repeat-motion--advice command args))
-                     '((name . evil-repeat-motion-adv))))))
-   evil-command-properties))
-
-(defun evil-repeat-motion-cleanup ()
-  "Cleanup the `evil-repeat-motion-apply' advices."
-  (seq-do
-   (lambda (command-data)
-     (when (eq (plist-get (cdr command-data) :repeat) 'motion)
-       (let ((command (car command-data)))
-         (advice-remove command 'xxx))))
-   evil-command-properties))
 
 (defvar evil-repeat-motion-mode-map (make-sparse-keymap)
   "Keymap for `evil-repeat-motion-mode'.")
@@ -120,8 +101,21 @@ ARGS - the args of the original command."
   :keymap evil-repeat-motion-mode-map
   :group 'evil-repeat-motion-apply
   (cond
-   (evil-repeat-motion-mode (evil-repeat-motion--setup))
-   (t (evil-repeat-motion-cleanup))) )
+   (evil-repeat-motion-mode (seq-do
+                             (lambda (command-data)
+                               (when (eq (plist-get (cdr command-data) :repeat) 'motion)
+                                 (let ((command (car command-data)))
+                                   (advice-add command
+                                               :after (lambda (&rest args)
+                                                        (evil-repeat-motion--advice command args))))))
+                             evil-command-properties))
+   (t (seq-do
+        (lambda (command-data)
+          (when (eq (plist-get (cdr command-data) :repeat) 'motion)
+            (let ((command (car command-data)))
+              (advice-remove command (lambda (&rest args)
+                                       (evil-repeat-motion--advice command args))))))
+        evil-command-properties))) )
 
 (provide 'evil-repeat-motion)
 ;;; evil-repeat-motion.el ends here

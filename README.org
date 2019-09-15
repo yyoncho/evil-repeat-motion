@@ -1,6 +1,4 @@
 ** evil-repeat-motion
-
-
 ** Installation
    Clone the repo, add it to
    #+begin_src elisp
@@ -8,13 +6,13 @@
    #+end_src
 
 ** Commands
-   - =evil-repeat-motion= - repeat the last motion. It acts as a replacement of
+   - =evil-repeat-motion-apply= - repeat the last motion. It acts as a replacement of
      =evil-repeat-find-char= but it repeats all motion commands marked as with
      =:repeat motion= in =evil-command-properties=. Bound by default to
    - =evil-repeat-motion-reverse= - applies the reverse of the last motion.
-   - =evil-repeat-motion-reverse-command= - applies the reverse of the last
-     motion and changes the last motion so the next time you invoke
-     =evil-repeat-motion= it will execute the reversed operation.
+   - =evil-repeat-motion-reverse-command= - the same as
+     =evil-repeat-motion-reverse= but it reverses the current command so it can
+     be repeated via =evil-repeat-motion-reverse=.
 ** Usage
 *** Spacemacs
     [[http://spacemacs.org][spacemacs]] users =,= so you I have use different key. Here it are
@@ -23,11 +21,12 @@
     #+end_src
 *** Vanilla evil
     #+begin_src elisp
-      (evil-define-key 'normal evil-repeat-motion-mode-map  ";" 'evil-repeat-motion-reverse)
-      (evil-define-key 'visual evil-repeat-motion-mode-map  ";" 'evil-repeat-motion-reverse)
+      (evil-define-key 'normal evil-repeat-motion-mode-map  ";" #'evil-repeat-motion-reverse)
+      (evil-define-key 'visual evil-repeat-motion-mode-map  ";" #'evil-repeat-motion-reverse)
     #+end_src
 ** Alternatives
    - [[https://github.com/willghatch/emacs-repeatable-motion][emacs-repeatable-motion]] - the same idea but requires the users to manually
      configure the pairs while [[https://github.com/yyoncho/evil-repeat-motion][evil-repeat-motion]] automatically detects the
      motion commands uses advices to track the last executed motion.
 ** Additional links
+   [[https://www.vim.org/scripts/script.php?script_id=4914][repeatable-motions.vim]] - vim plugin with similar idea.
