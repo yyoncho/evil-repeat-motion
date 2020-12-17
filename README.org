@@ -1,6 +1,6 @@
 ** evil-repeat-motion
 ** Installation
-   Clone the repo, add it to
+   Clone the repo, add this to your config:
    #+begin_src elisp
      (evil-repeat-motion-mode 1)
    #+end_src
